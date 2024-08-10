@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TextField, Button, List as MUIList, Container, Paper, Typography, Box } from '@mui/material';
 import Item from './Item';
+import axios from 'axios';
 
 interface Todo {
     id: number;
@@ -12,19 +13,48 @@ const List: React.FC = () => {
     const [todos, setTodos] = useState<Todo[]>([]);
     const [newTodo, setNewTodo] = useState<string>('');
 
+    useEffect(() => {
+        fetchTodos();
+    }, []);
+
+    const fetchTodos = () => {
+        axios.get('http://localhost:5000/')
+            .then(response => setTodos(response.data))
+            .catch(error => console.error(error));
+    };
+
     const addTodo = () => {
         if (newTodo.trim() !== '') {
-            setTodos([...todos, { id: Date.now(), text: newTodo, done: false }]);
-            setNewTodo('');
+            axios.post('http://localhost:5000/', { text: newTodo })
+                .then(response => {
+                    setTodos([...todos, response.data]);
+                    setNewTodo('');
+                })
+                .catch(error => console.error(error));
         }
     };
 
     const toggleTodo = (id: number) => {
-        setTodos(
-            todos.map(todo =>
-                todo.id === id ? { ...todo, done: !todo.done } : todo
-            )
-        );
+        const todo = todos.find(todo => todo.id === id);
+        if (todo) {
+            axios.put(`http://localhost:5000/${id}`, { done: !todo.done })
+                .then(() => {
+                    setTodos(
+                        todos.map(todo =>
+                            todo.id === id ? { ...todo, done: !todo.done } : todo
+                        )
+                    );
+                })
+                .catch(error => console.error(error));
+        }
+    };
+
+    const deleteTodo = (id: number) => {
+        axios.delete(`http://localhost:5000/${id}`)
+            .then(() => {
+                setTodos(todos.filter(todo => todo.id !== id));
+            })
+            .catch(error => console.error(error));
     };
 
     return (
@@ -56,6 +86,7 @@ const List: React.FC = () => {
                             text={todo.text}
                             done={todo.done}
                             onToggle={() => toggleTodo(todo.id)}
+                            onDelete={() => deleteTodo(todo.id)}
                         />
                     ))}
                 </MUIList>
