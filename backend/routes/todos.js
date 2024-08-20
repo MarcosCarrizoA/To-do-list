@@ -1,34 +1,40 @@
 const express = require('express');
+const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
-let todos = [];
+const prisma = new PrismaClient();
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+    const todos = await prisma.todo.findMany();
     res.json(todos);
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
     const { text } = req.body;
     if (text) {
-        const newTodo = { id: Date.now(), text, done: false };
-        todos.push(newTodo);
+        const newTodo = await prisma.todo.create({
+            data: { text },
+        });
         res.status(201).json(newTodo);
     } else {
         res.status(400).json({ error: 'Text is required' });
     }
 });
 
-router.put('/:id', (req, res) => {
-    const id = Number(req.params.id);
+router.put('/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
     const { done } = req.body;
-    todos = todos.map(todo =>
-        todo.id === id ? { ...todo, done } : todo
-    );
-    res.json({ message: 'Todo updated' });
+    const updatedTodo = await prisma.todo.update({
+        where: { id },
+        data: { done },
+    });
+    res.json(updatedTodo);
 });
 
-router.delete('/:id', (req, res) => {
-    const id = Number(req.params.id);
-    todos = todos.filter(todo => todo.id !== id);
+router.delete('/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    await prisma.todo.delete({
+        where: { id },
+    });
     res.json({ message: 'Todo deleted' });
 });
 
